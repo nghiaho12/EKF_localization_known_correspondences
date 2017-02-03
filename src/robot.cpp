@@ -1,6 +1,7 @@
 #include "robot.h"
 #include <cmath>
 #include <random>
+#include <iostream>
 
 #include "config.h"
 
@@ -47,14 +48,18 @@ double Robot::vel_noisy()
 
     std::normal_distribution<double> dice(0, 1);
 
-    return m_vel + m_vel*ALPHA1*dice(e);
+    double sigma = sqrt((m_vel*m_vel*ALPHA1 + m_yaw_vel*m_yaw_vel*ALPHA2));
+
+    return m_vel + sigma*dice(e);
 }
 
-double Robot::yaw_noisy()
+double Robot::yaw_vel_noisy()
 {
     default_random_engine e(g_r());
 
     std::normal_distribution<double> dice(0, 1);
 
-    return m_yaw + m_yaw_vel*ALPHA3*dice(e);
+    double sigma = sqrt(m_vel*m_vel*ALPHA3 + m_yaw_vel*m_yaw_vel*ALPHA4);
+
+    return m_yaw_vel + sigma*dice(e);
 }

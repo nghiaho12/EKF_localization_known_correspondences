@@ -9,8 +9,7 @@ public:
     bool in_view(double x, double y);
 
     // controls
-    void set_velocity(double vel) { m_vel = vel; }
-    void set_yaw_velocity(double yaw_vel) { m_yaw_vel = yaw_vel; }
+
     void update(double dt);
 
     // setter
@@ -23,12 +22,15 @@ public:
     double y() { return m_y; }
     double yaw() { return m_yaw; }
 
+    void vel(double vel) { m_vel = vel; }
+    void yaw_vel(double yaw_vel) { m_yaw_vel = yaw_vel; }
+
     double vel() { return m_vel; }
     double yaw_vel() { return m_yaw_vel; }
 
     // noisy version
     double vel_noisy();
-    double yaw_noisy();
+    double yaw_vel_noisy();
 
 private:
     // robot state

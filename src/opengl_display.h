@@ -21,11 +21,13 @@ private:
     void display();
     void render_landmarks();
     void render_robot();
+    void render_robot(float x, float y, float yaw, float r, float g, float b);
 
     void init_robot();
     void init_landmarks();
 
     void update_robot();
+
 
 private:
     static constexpr float ROBOT_RADIUS = 10;

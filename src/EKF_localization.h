@@ -16,8 +16,13 @@ public:
     double y() { return m_mu(1); }
     double yaw() { return m_mu(2); }
 
+    double ellipse_angle() { return m_ellipse_angle; }
+    double ellipse_major() { return m_ellipse_major; }
+    double ellipse_minor() { return m_ellipse_minor; }
+
 private:
     void init_ekf();
+    void calc_error_ellipse();
 
 private:
     Eigen::Matrix<double, 3, 1> m_mu; // estimated state
@@ -26,4 +31,9 @@ private:
     // noise matrix
     Eigen::Matrix<double, 2, 2> m_landmark_cov;
     Eigen::Matrix<double, 2, 2> m_motion_cov;
+
+    // error ellipse for (x, y);
+    double m_ellipse_major;
+    double m_ellipse_minor;
+    double m_ellipse_angle;
 };

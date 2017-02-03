@@ -114,8 +114,12 @@ void OpenGLDisplay::process_events()
             }
 
             case SDL_KEYUP: {
-                m_vel_sp = 0;
-                m_yaw_vel_sp = 0;
+                if (event.key.keysym.sym == SDLK_LEFT || event.key.keysym.sym == SDLK_RIGHT) {
+                    m_yaw_vel_sp = 0;
+                } else if (event.key.keysym.sym == SDLK_UP || event.key.keysym.sym == SDLK_DOWN) {
+                    m_vel_sp = 0;
+                }
+
                 break;
             }
         }
@@ -186,26 +190,37 @@ void OpenGLDisplay::init_landmarks()
     m_landmarks.push_back(l);
 }
 
-void OpenGLDisplay::render_robot()
+void OpenGLDisplay::render_robot(float x, float y, float yaw, float r, float g, float b)
 {
-    glColor3f(0, 1, 0);
+    glColor3f(r, g, b);
+
     glPushMatrix();
     glLoadIdentity();
 
     glBegin(GL_LINE_LOOP);
     for (float a=0; a < 360; a += 10) {
-        float x = m_robot.x() + ROBOT_RADIUS*cos(a*M_PI/180);
-        float y = m_robot.y() + ROBOT_RADIUS*sin(a*M_PI/180);
+        float _x = x + ROBOT_RADIUS*cos(a*M_PI/180);
+        float _y = y + ROBOT_RADIUS*sin(a*M_PI/180);
 
-        glVertex2f(x, y);
+        glVertex2f(_x, _y);
     }
     glEnd();
 
     // heading arrow
     glBegin(GL_LINES);
-    glVertex2f(m_robot.x(), m_robot.y());
-    glVertex2f(m_robot.x() + ROBOT_HEADING*cos(m_robot.yaw()), m_robot.y() + ROBOT_HEADING*sin(m_robot.yaw()));
+    glVertex2f(x, y);
+    glVertex2f(x + ROBOT_HEADING*cos(yaw), y + ROBOT_HEADING*sin(yaw));
     glEnd();
+
+    glPopMatrix();
+}
+
+void OpenGLDisplay::render_robot()
+{
+    render_robot(m_robot.x(), m_robot.y(), m_robot.yaw(), 0, 1, 0);
+    render_robot(m_ekf.x(), m_ekf.y(), m_ekf.yaw(), 0.5, 0.5, 0.5);
+
+    glColor3f(0, 1, 0);
 
     // fov cone
     double fov = FOV;
@@ -230,6 +245,24 @@ void OpenGLDisplay::render_robot()
     glBegin(GL_LINES);
     glVertex2f(x1, y1);
     glVertex2f(x2, y2);
+    glEnd();
+
+    // error ellipse
+    double angle = m_ekf.ellipse_angle();
+    double major = m_ekf.ellipse_major();
+    double minor = m_ekf.ellipse_minor();
+
+    glColor3f(0.5, 0.5, 0.5);
+    glBegin(GL_LINE_LOOP);
+    for (int a=0; a < 360; a += 10) {
+        double xe = ELLIPSE_CHI*major*cos(a*M_PI/180);
+        double ye = ELLIPSE_CHI*minor*sin(a*M_PI/180);
+
+        double x = m_ekf.x() + xe*cos(angle) - ye*sin(angle);
+        double y = m_ekf.y() + xe*sin(angle) + ye*cos(angle);
+
+        glVertex2f(x, y);
+    }
     glEnd();
 
     glPopMatrix();
@@ -264,32 +297,32 @@ void OpenGLDisplay::render_landmarks()
 
 void OpenGLDisplay::update_robot()
 {
-    m_robot.set_velocity(m_vel_sp);
-    m_robot.set_yaw_velocity(m_yaw_vel_sp * M_PI / 180);
+    m_robot.vel(m_vel_sp);
+    m_robot.yaw_vel(m_yaw_vel_sp * M_PI / 180);
     m_robot.update(m_dt);
 
     if (m_robot.x() < 0) {
         m_robot.x(0);
-        m_robot.set_velocity(0);
+        m_robot.vel(0);
     }
 
     if (m_robot.y() < 0) {
         m_robot.y(0);
-        m_robot.set_velocity(0);
+        m_robot.vel(0);
     }
 
     if (m_robot.x() >= m_width) {
         m_robot.x(m_width - 1);
-        m_robot.set_velocity(0);
+        m_robot.vel(0);
     }
 
     if (m_robot.y() >= m_height) {
         m_robot.y(m_height - 1);
-        m_robot.set_velocity(0);
+        m_robot.vel(0);
     }
 
-    if (m_robot.vel()  || m_robot.yaw_vel()) {
-        m_ekf.update(m_robot.vel_noisy(), m_robot.yaw_noisy(), m_landmarks, m_dt);
+    if (m_robot.vel() || m_robot.yaw_vel()) {
+        m_ekf.update(m_robot.vel_noisy(), m_robot.yaw_vel_noisy(), m_landmarks, m_dt);
     }
 }
 
