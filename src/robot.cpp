@@ -7,7 +7,11 @@
 
 using namespace std;
 
-static random_device g_r;
+Robot::Robot()
+{
+    m_random_engine.seed(m_random_device());
+    m_dice = normal_distribution<double>(0.0 ,1.0);
+}
 
 void Robot::update(double dt)
 {
@@ -17,49 +21,59 @@ void Robot::update(double dt)
     m_y = m_y + m_vel*sin(m_yaw)*dt;
 }
 
-bool Robot::in_view(double x, double y)
+bool Robot::landmark_in_view(Landmark &l)
 {
-    double dx = x - m_x;
-    double dy = y - m_y;
-    double dist = sqrt(dx*dx + dy*dy);
+    double range, bearing;
 
-    if (dist < DETECTION_RANGE) {
-        dx /= dist;
-        dy /= dist;
+    landmark_range_bearing(l, m_x, m_y, m_yaw, range, bearing);
 
-        double heading_x = cos(m_yaw);
-        double heading_y = sin(m_yaw);
+    if (range < DETECTION_RANGE && fabs(bearing) < FOV*0.5) {
+        double range_sigma = range*DETECTION_RANGE_ALPHA;
 
-        double dot = dx*heading_x + dy*heading_y;
+        l.range = range + m_dice(m_random_engine) * range_sigma;
+        l.theta = bearing + m_dice(m_random_engine) * DETECTION_ANGLE_SIGMA;
 
-        double theta = acos(dot);
-
-        if (theta < FOV*0.5) {
-            return true;
-        }
+        return true;
     }
 
     return false;
 }
 
+void Robot::landmark_range_bearing(const Landmark &l, double x, double y, double yaw, double &range, double &bearing)
+{
+    double heading_x = cos(yaw);
+    double heading_y = sin(yaw);
+
+    double dx = l.x - x;
+    double dy = l.y - y;
+    range = sqrt(dx*dx + dy*dy);
+
+    dx /= range;
+    dy /= range;
+
+    double dot = dx*heading_x + dy*heading_y;
+
+    bearing = acos(dot);
+
+    // correct for sign
+    double tangent_dx = heading_y;
+    double tangent_dy = -heading_x;
+
+    if (tangent_dx*dx + tangent_dy*dy > 0) {
+        bearing = -bearing;
+    }
+}
+
 double Robot::vel_noisy()
 {
-    default_random_engine e(g_r());
-
-    std::normal_distribution<double> dice(0, 1);
-
     double sigma = sqrt((m_vel*m_vel*ALPHA1 + m_yaw_vel*m_yaw_vel*ALPHA2));
 
-    return m_vel + sigma*dice(e);
+    return m_vel + sigma*m_dice(m_random_engine);
 }
 
 double Robot::yaw_vel_noisy()
 {
-    default_random_engine e(g_r());
-
-    std::normal_distribution<double> dice(0, 1);
-
     double sigma = sqrt(m_vel*m_vel*ALPHA3 + m_yaw_vel*m_yaw_vel*ALPHA4);
 
-    return m_yaw_vel + sigma*dice(e);
+    return m_yaw_vel + sigma*m_dice(m_random_engine);
 }

@@ -188,6 +188,31 @@ void OpenGLDisplay::init_landmarks()
     l.b = 1;
 
     m_landmarks.push_back(l);
+
+    l.x = m_width/2;
+    l.y = m_height/2;
+    l.r = 1;
+    l.g = 1;
+    l.b = 1;
+
+
+    m_landmarks.push_back(l);
+
+    l.x = m_width/2 + 50;
+    l.y = m_height/2 + 50;
+    l.r = 1;
+    l.g = 1;
+    l.b = 1;
+
+    m_landmarks.push_back(l);
+
+    l.x = m_width/2 + 50;
+    l.y = m_height/2 - 50;
+    l.r = 1;
+    l.g = 1;
+    l.b = 1;
+
+    m_landmarks.push_back(l);
 }
 
 void OpenGLDisplay::render_robot(float x, float y, float yaw, float r, float g, float b)
@@ -276,7 +301,7 @@ void OpenGLDisplay::render_landmarks()
     for (auto &l : m_landmarks) {
         glColor3f(l.r, l.g, l.b);
 
-        if (m_robot.in_view(l.x, l.y)) {
+        if (m_robot.landmark_in_view(l)) {
             glLineWidth(5.0);
         } else {
             glLineWidth(1.0);
@@ -322,7 +347,15 @@ void OpenGLDisplay::update_robot()
     }
 
     if (m_robot.vel() || m_robot.yaw_vel()) {
-        m_ekf.update(m_robot.vel_noisy(), m_robot.yaw_vel_noisy(), m_landmarks, m_dt);
+        vector<Landmark> observed_landmark;
+
+        for (auto l : m_landmarks) {
+            if (m_robot.landmark_in_view(l)) {
+                observed_landmark.push_back(l);
+            }
+        }
+
+        m_ekf.update(m_robot.vel_noisy(), m_robot.yaw_vel_noisy(), observed_landmark, m_dt);
     }
 }
 

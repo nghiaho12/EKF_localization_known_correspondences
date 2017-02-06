@@ -6,4 +6,8 @@ struct Landmark
     float y;
 
     float r, g, b;
+
+    // Relative to robot
+    double range;
+    double theta;
 };

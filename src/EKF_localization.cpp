@@ -1,6 +1,9 @@
 #include "EKF_localization.h"
-#include "config.h"
+
 #include <iostream>
+
+#include "config.h"
+#include "robot.h"
 
 using namespace std;
 using namespace Eigen;
@@ -38,9 +41,21 @@ void EKF_localization::update(double vel, double yaw_vel, const std::vector<Land
     Matrix<double, 3, 1> MU;
     Matrix<double, 3, 3> COV;
 
+    // correction step
+    Matrix<double, 3, 1> ZHAT;
+    Matrix<double, 3, 1> Z;
+    Matrix<double, 3, 3> H;
+    Matrix<double, 3, 3> S;
+    Matrix<double, 3, 3> Q;
+    Matrix<double, 3, 3> K;
+    Matrix<double, 3, 3> I;
+
     G.setIdentity();
     M.setZero();
     V.setZero();
+    Q.setZero();
+    H.setZero();
+    I.setIdentity();
 
     double theta = yaw();
     double w = yaw_vel;
@@ -51,6 +66,7 @@ void EKF_localization::update(double vel, double yaw_vel, const std::vector<Land
 
     V(2, 1) = dt;
 
+    // apply motion model
     if (fabs(yaw_vel) > EPS) {
         double r = vel/yaw_vel;
         double c = cos(theta);
@@ -92,7 +108,38 @@ void EKF_localization::update(double vel, double yaw_vel, const std::vector<Land
         COV = m_cov + V*M*V.transpose();
     }
 
+    for (const auto &l : landmarks) {
+        Z(0) = l.range;
+        Z(1) = l.theta;
+        Z(2) = 0;
+
+        double range, bearing;
+        Robot::landmark_range_bearing(l, MU(0), MU(1), MU(2), range, bearing);
+
+        ZHAT(0) = range;
+        ZHAT(1) = bearing;
+        ZHAT(2) = 0;
+
+        H(0, 0) = -(l.x - MU(0))/range;
+        H(0, 1) = -(l.y - MU(1))/range;
+        H(0, 2) = 0;
+        H(1, 0) =  (l.y - MU(1))/(range*range);
+        H(1, 1) = -(l.x - MU(0))/(range*range);
+        H(1, 2) =  -1;
+
+        Q(0, 0) = pow(l.range*DETECTION_RANGE_ALPHA, 2);
+        Q(1, 1) = pow(DETECTION_ANGLE_SIGMA, 2);
+        Q(2, 2) = 1; // arbitrary noise for signature
+
+        S = H*COV*H.transpose() + Q;
+
+        K = COV*H.transpose()*S.inverse();
+        MU = MU + K*(Z - ZHAT);
+        COV = (I - K*H)*COV;
+    }
+
     m_mu = MU;
+
     m_cov = COV;
 
     calc_error_ellipse();
