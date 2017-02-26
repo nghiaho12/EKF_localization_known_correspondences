@@ -11,7 +11,7 @@ This demo code requires the following libraries
 - SDL2
 - Eigen
 
-I've only tested this on a Linux machine but it should on Mac and Windows because both libraries are cross platform.
+I've only tested this on a Linux machine but it should work on Mac and Windows because both libraries are cross platform.
 
 ###Compiling
 ```
