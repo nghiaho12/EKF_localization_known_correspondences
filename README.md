@@ -1,3 +1,5 @@
+###Introduction 
+
 This is an implementation of the EKF localizationn with known correspondences from the book Probabilistic Robotics by Thrun et. al. I wrote this code to help me understand the material better. So others may find it useful as well.
 
 The simulation consists of a robot with a range sensor that can detect known landmarks in the world. You move the robot around using the arrow keys.
