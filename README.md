@@ -11,8 +11,8 @@ I've only tested this on a Linux machine but it should on Mac and Windows becaus
 
 ###Compiling
 ```
-$mkdir build
-$cd build
-$cmake ..
-$make
+mkdir build
+cd build
+cmake ..
+make
 ```
