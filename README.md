@@ -10,7 +10,7 @@ This demo code requires the following libraries
 I've only tested this on a Linux machine but it should on Mac and Windows because both libraries are cross platform.
 
 ###Compiling
-mkdir build
-cd build
-cmake ..
-make
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
