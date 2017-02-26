@@ -32,7 +32,9 @@ void OpenGLDisplay::main(std::string title, int width, int height)
 
     setup_opengl(width, height);
     init_robot();
-    init_landmarks();
+    print_help();
+
+    m_last_tick = SDL_GetTicks();
 
     while (!m_quit) {
         m_dt = (SDL_GetTicks() - m_last_tick) / 1000.0;
@@ -66,48 +68,18 @@ void OpenGLDisplay::process_events()
     SDL_Event event;
 
     while (SDL_PollEvent(&event)) {
-        float x = event.motion.x;
-        float y = m_height - event.motion.y - 1;
-
         switch (event.type) {
-            case SDL_MOUSEBUTTONDOWN: {
-                if (event.button.button == SDL_BUTTON_LEFT) {
-
-                }
-
-                break;
-            }
-
             case SDL_KEYDOWN: {
                 if (event.key.keysym.sym == SDLK_ESCAPE) {
                     m_quit = true;
                 } else if (event.key.keysym.sym == SDLK_LEFT) {
-                    m_yaw_vel_sp += MAX_YAW_VEL;
-
-                    if (m_yaw_vel_sp > MAX_YAW_VEL) {
-                        m_yaw_vel_sp = MAX_YAW_VEL;
-                    }
+                    m_yaw_vel_sp = ROBOT_YAW_VEL;
                 } else if (event.key.keysym.sym == SDLK_RIGHT) {
-                    m_yaw_vel_sp -= MAX_YAW_VEL;
-
-                    if (m_yaw_vel_sp < -MAX_YAW_VEL) {
-                        m_yaw_vel_sp = -MAX_YAW_VEL;
-                    }
+                    m_yaw_vel_sp = -ROBOT_YAW_VEL;
                 } else if (event.key.keysym.sym == SDLK_UP) {
-                    m_vel_sp += MAX_VEL;
-
-                    if (m_vel_sp > MAX_VEL) {
-                        m_vel_sp = MAX_VEL;
-                    }
+                    m_vel_sp = ROBOT_VEL;
                 } else if (event.key.keysym.sym == SDLK_DOWN) {
-                    m_vel_sp -= MAX_VEL;
-
-                    if (m_vel_sp < -MAX_VEL) {
-                        m_vel_sp = -MAX_VEL;
-                    }
-                } else if (event.key.keysym.sym == SDLK_SPACE) {
-                    m_vel_sp = 0;
-                    m_yaw_vel_sp = 0;
+                    m_vel_sp = -ROBOT_VEL;
                 }
 
                 break;
@@ -138,81 +110,20 @@ void OpenGLDisplay::display()
     glLoadIdentity();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    render_robot();
+    render_boundary();
     render_landmarks();
+    render_robot();
 
     SDL_GL_SwapWindow(m_window);
 }
 
 void OpenGLDisplay::init_robot()
 {
-    m_robot.x(m_width/2);
+    m_robot.x(m_width*2/3);
     m_robot.y(m_height/2);
     m_robot.yaw(M_PI_2);
 
     m_ekf.set_state(m_robot.x(), m_robot.y(), m_robot.yaw());
-}
-
-void OpenGLDisplay::init_landmarks()
-{
-    Landmark l;
-
-    l.x = 100;
-    l.y = 100;
-    l.r = 1;
-    l.g = 0;
-    l.b = 0;
-
-    m_landmarks.push_back(l);
-
-    l.x = m_width - 100;
-    l.y = 100;
-    l.r = 0;
-    l.g = 1;
-    l.b = 0;
-
-    m_landmarks.push_back(l);
-
-    l.x = 100;
-    l.y = m_height - 100;
-    l.r = 0;
-    l.g = 1;
-    l.b = 1;
-
-    m_landmarks.push_back(l);
-
-    l.x = m_width - 100;
-    l.y = m_height - 100;
-    l.r = 1;
-    l.g = 0;
-    l.b = 1;
-
-    m_landmarks.push_back(l);
-
-    l.x = m_width/2;
-    l.y = m_height/2;
-    l.r = 1;
-    l.g = 1;
-    l.b = 1;
-
-
-    m_landmarks.push_back(l);
-
-    l.x = m_width/2 + 50;
-    l.y = m_height/2 + 50;
-    l.r = 1;
-    l.g = 1;
-    l.b = 1;
-
-    m_landmarks.push_back(l);
-
-    l.x = m_width/2 + 50;
-    l.y = m_height/2 - 50;
-    l.r = 1;
-    l.g = 1;
-    l.b = 1;
-
-    m_landmarks.push_back(l);
 }
 
 void OpenGLDisplay::render_robot(float x, float y, float yaw, float r, float g, float b)
@@ -279,10 +190,11 @@ void OpenGLDisplay::render_robot()
 
     glColor3f(0.5, 0.5, 0.5);
     glBegin(GL_LINE_LOOP);
-    for (int a=0; a < 360; a += 10) {
+    for (float a=0; a < 360.0; a += 10.0) {
         double xe = ELLIPSE_CHI*major*cos(a*M_PI/180);
         double ye = ELLIPSE_CHI*minor*sin(a*M_PI/180);
 
+        // rotate and center [xe, ye]
         double x = m_ekf.x() + xe*cos(angle) - ye*sin(angle);
         double y = m_ekf.y() + xe*sin(angle) + ye*cos(angle);
 
@@ -293,12 +205,28 @@ void OpenGLDisplay::render_robot()
     glPopMatrix();
 }
 
+void OpenGLDisplay::render_boundary()
+{
+    glPushMatrix();
+    glLoadIdentity();
+
+    glColor3f(1, 1, 1);
+    glBegin(GL_LINE_LOOP);
+    glVertex2f(BOUNDARY_X1, BOUNDARY_Y1);
+    glVertex2f(BOUNDARY_X2, BOUNDARY_Y1);
+    glVertex2f(BOUNDARY_X2, BOUNDARY_Y2);
+    glVertex2f(BOUNDARY_X1, BOUNDARY_Y2);
+    glEnd();
+
+    glPopMatrix();
+}
+
 void OpenGLDisplay::render_landmarks()
 {
     glPushMatrix();
     glLoadIdentity();
 
-    for (auto &l : m_landmarks) {
+    for (auto l : LANDMARKS) {
         glColor3f(l.r, l.g, l.b);
 
         if (m_robot.landmark_in_view(l)) {
@@ -322,34 +250,29 @@ void OpenGLDisplay::render_landmarks()
 
 void OpenGLDisplay::update_robot()
 {
+    double prev_x = m_robot.x();
+    double prev_y = m_robot.y();
+
     m_robot.vel(m_vel_sp);
-    m_robot.yaw_vel(m_yaw_vel_sp * M_PI / 180);
+    m_robot.yaw_vel(m_yaw_vel_sp);
+
     m_robot.update(m_dt);
 
-    if (m_robot.x() < 0) {
-        m_robot.x(0);
+    // enforce boundary
+    if (m_robot.x() < BOUNDARY_X1 ||
+        m_robot.y() < BOUNDARY_Y1 ||
+        m_robot.x() > BOUNDARY_X2 ||
+        m_robot.y() > BOUNDARY_Y2) {
+
+        m_robot.x(prev_x);
+        m_robot.y(prev_y);
         m_robot.vel(0);
     }
 
-    if (m_robot.y() < 0) {
-        m_robot.y(0);
-        m_robot.vel(0);
-    }
-
-    if (m_robot.x() >= m_width) {
-        m_robot.x(m_width - 1);
-        m_robot.vel(0);
-    }
-
-    if (m_robot.y() >= m_height) {
-        m_robot.y(m_height - 1);
-        m_robot.vel(0);
-    }
-
-    if (m_robot.vel() || m_robot.yaw_vel()) {
+    if (m_robot.is_moving()) {
         vector<Landmark> observed_landmark;
 
-        for (auto l : m_landmarks) {
+        for (auto l : LANDMARKS) {
             if (m_robot.landmark_in_view(l)) {
                 observed_landmark.push_back(l);
             }
@@ -359,3 +282,13 @@ void OpenGLDisplay::update_robot()
     }
 }
 
+void OpenGLDisplay::print_help()
+{
+    cout << "EKF localization with known correspondences demo." << endl;
+    cout << "Implementation is based on the book Probabilistic Robotics by Thrun et. al." << endl;
+    cout << endl;
+    cout << "Use the arrow key to move the robot around" << endl;
+    cout << "  - Green is the true state of the robot" << endl;
+    cout << "  - Gray is the estimate from the EKF" << endl;
+    cout << "  - Red is a landmark" << endl;
+}

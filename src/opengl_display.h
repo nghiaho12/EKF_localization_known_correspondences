@@ -19,22 +19,22 @@ private:
     void setup_opengl(int width, int height);
     void process_events();
     void display();
+
     void render_landmarks();
     void render_robot();
     void render_robot(float x, float y, float yaw, float r, float g, float b);
+    void render_boundary();
 
     void init_robot();
-    void init_landmarks();
-
     void update_robot();
 
+    void print_help();
 
 private:
     static constexpr float ROBOT_RADIUS = 10;
     static constexpr float ROBOT_HEADING = 20;
     static constexpr float LANDMARK_RADIUS = 5;
-    static const int MAX_VEL = 100;
-    static const int MAX_YAW_VEL = 60;
+
 
     bool m_quit = false;
     int m_width;
@@ -42,15 +42,13 @@ private:
 
     SDL_Window *m_window = nullptr;
     SDL_GLContext m_context;
-
     uint32_t m_last_tick = 0;
+
     int m_yaw_vel_sp = 0;
     int m_vel_sp = 0;
 
     Robot m_robot;
-    std::vector<Landmark> m_landmarks;
+    EKF_localization m_ekf;
 
     double m_dt = 0;
-
-    EKF_localization m_ekf;
 };

@@ -31,7 +31,7 @@ bool Robot::landmark_in_view(Landmark &l)
         double range_sigma = range*DETECTION_RANGE_ALPHA;
 
         l.range = range + m_dice(m_random_engine) * range_sigma;
-        l.theta = bearing + m_dice(m_random_engine) * DETECTION_ANGLE_SIGMA;
+        l.bearing = bearing + m_dice(m_random_engine) * DETECTION_ANGLE_SIGMA;
 
         return true;
     }
@@ -76,4 +76,15 @@ double Robot::yaw_vel_noisy()
     double sigma = sqrt(m_vel*m_vel*ALPHA3 + m_yaw_vel*m_yaw_vel*ALPHA4);
 
     return m_yaw_vel + sigma*m_dice(m_random_engine);
+}
+
+bool Robot::is_moving()
+{
+    static const double eps = 0.0001; // kinda arbitrary
+
+    if (fabs(m_vel) > eps || fabs(m_yaw_vel) > eps) {
+        return true;
+    }
+
+    return false;
 }

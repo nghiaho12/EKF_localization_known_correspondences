@@ -9,16 +9,20 @@ class EKF_localization
 public:
     EKF_localization();
 
-    void update(double vel, double yaw_vel, const std::vector<Landmark> &landmarks, double dt);
+    // v = velocity
+    // w = yaw  velocity
+    void update(double v, double w, const std::vector<Landmark> &landmarks, double dt);
 
     void set_state(double x, double y, double yaw);
     double x() { return m_mu(0); }
     double y() { return m_mu(1); }
     double yaw() { return m_mu(2); }
 
-    double ellipse_angle() { return m_ellipse_angle; }
     double ellipse_major() { return m_ellipse_major; }
     double ellipse_minor() { return m_ellipse_minor; }
+    double ellipse_angle() { return m_ellipse_angle; }
+
+    Eigen::Matrix<double, 3, 3> cov() { return m_cov; }
 
 private:
     void init_ekf();
@@ -32,8 +36,10 @@ private:
     Eigen::Matrix<double, 2, 2> m_landmark_cov;
     Eigen::Matrix<double, 2, 2> m_motion_cov;
 
+    double m_dt;
+
     // error ellipse for (x, y);
-    double m_ellipse_major;
-    double m_ellipse_minor;
-    double m_ellipse_angle;
+    double m_ellipse_major = 0.0;
+    double m_ellipse_minor = 0.0;
+    double m_ellipse_angle = 0.0;
 };

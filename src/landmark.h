@@ -4,10 +4,9 @@ struct Landmark
 {
     float x;
     float y;
+    float r, g, b; // RGB color
 
-    float r, g, b;
-
-    // Relative to robot
+    // Sensor reading relative to robot's pose
     double range;
-    double theta;
+    double bearing;
 };
