@@ -2,7 +2,7 @@ This is an implementation of the EKF localizationn with known correspondences fr
 
 The simulation consists of a robot with a range sensor that can detect known landmarks in the world. You move the robot around using the arrow keys.
 
-One addition I made was handling the case when angular velocity is close to zero. The original code found in the book would result in a divide by zero.
+One addition I made was handle the case when angular velocity is zero. The original code found in the book would result in a divide by zero.
 
 ![ekf_localization](https://cloud.githubusercontent.com/assets/1471705/23337133/36ce48a4-fc38-11e6-952f-f79a08a3ccc1.png)
 
