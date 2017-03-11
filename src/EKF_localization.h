@@ -18,23 +18,17 @@ public:
     double y() { return m_mu(1); }
     double yaw() { return m_mu(2); }
 
-    double ellipse_major() { return m_ellipse_major; }
-    double ellipse_minor() { return m_ellipse_minor; }
-    double ellipse_angle() { return m_ellipse_angle; }
-
-    Eigen::Matrix<double, 3, 3> cov() { return m_cov; }
+    void pose_ellipse(double &major, double &minor, double &theta);
 
 private:
     void init_ekf();
     void calc_error_ellipse();
+    double constrain_angle(double radian);
+    void ellipse(Eigen::MatrixXd X, double &major, double &minor, double &theta);
 
 private:
     Eigen::Matrix<double, 3, 1> m_mu; // estimated state
     Eigen::Matrix<double, 3, 3> m_cov; // state covarianc
-
-    // noise matrix
-    Eigen::Matrix<double, 2, 2> m_landmark_cov;
-    Eigen::Matrix<double, 2, 2> m_motion_cov;
 
     double m_dt;
 

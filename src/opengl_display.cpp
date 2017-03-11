@@ -184,25 +184,11 @@ void OpenGLDisplay::render_robot()
     glEnd();
 
     // error ellipse
-    double angle = m_ekf.ellipse_angle();
-    double major = m_ekf.ellipse_major();
-    double minor = m_ekf.ellipse_minor();
+    double major, minor, angle;
 
-    glColor3f(0.5, 0.5, 0.5);
-    glBegin(GL_LINE_LOOP);
-    for (float a=0; a < 360.0; a += 10.0) {
-        double xe = ELLIPSE_CHI*major*cos(a*M_PI/180);
-        double ye = ELLIPSE_CHI*minor*sin(a*M_PI/180);
+    m_ekf.pose_ellipse(major, minor, angle);
 
-        // rotate and center [xe, ye]
-        double x = m_ekf.x() + xe*cos(angle) - ye*sin(angle);
-        double y = m_ekf.y() + xe*sin(angle) + ye*cos(angle);
-
-        glVertex2f(x, y);
-    }
-    glEnd();
-
-    glPopMatrix();
+    render_ellipse(m_ekf.x(), m_ekf.y(), major, minor, angle, 0.5, 0.5, 0.5);
 }
 
 void OpenGLDisplay::render_boundary()
@@ -244,6 +230,41 @@ void OpenGLDisplay::render_landmarks()
     }
 
     glLineWidth(1.0);
+
+    glPopMatrix();
+}
+
+void OpenGLDisplay::render_ellipse(float x, float y, float major, float minor, float angle, float r, float g, float b)
+{
+    glPushMatrix();
+    glLoadIdentity();
+
+    glColor3f(r, g, b);
+
+    glTranslatef(x, y, 0);
+    glRotatef(angle*180/M_PI, 0, 0, 1);
+
+    // draw major axis
+    glBegin(GL_LINES);
+    glVertex2f(-major, 0);
+    glVertex2f(major, 0);
+    glEnd();
+
+    // draw minor axis
+    glBegin(GL_LINES);
+    glVertex2f(0, -minor);
+    glVertex2f(0, minor);
+    glEnd();
+
+    // draw ellipise
+    glBegin(GL_LINE_LOOP);
+    for (float a=0; a < 360.0; a += 10.0) {
+        double xe = major*cos(a*M_PI/180);
+        double ye = minor*sin(a*M_PI/180);
+
+        glVertex2f(xe, ye);
+    }
+    glEnd();
 
     glPopMatrix();
 }

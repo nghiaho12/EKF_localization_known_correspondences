@@ -15,10 +15,6 @@ EKF_localization::EKF_localization()
 
 void EKF_localization::init_ekf()
 {
-    m_landmark_cov.setZero();
-    m_landmark_cov(0, 0) = pow(LANDMARK_RANGE_SIGMA, 2);
-    m_landmark_cov(1, 1) = pow(LANDMARK_ANGLE_SIGMA, 2);
-
     m_cov.setZero();
 }
 
@@ -36,22 +32,22 @@ void EKF_localization::update(double v, double w, const std::vector<Landmark> &l
     // I've kept variables name to be the same where possible.
 
     // I added special handling for w ~ 0. The original implementation does not handle this.
-    const double EPS = 0.0001;
+    const double EPS = 1e-4;
 
-    Matrix<double, 3, 3> G;
-    Matrix<double, 3, 2> V;
-    Matrix<double, 2, 2> M;
+    Matrix<double, 3, 3> G; // Jacobian (motion update / state variable)
+    Matrix<double, 3, 2> V; // Jacobian (motion noise / state variable)
+    Matrix<double, 2, 2> M; // motion noise
     Matrix<double, 3, 1> MU;
     Matrix<double, 3, 3> COV;
 
     // correction step
-    Matrix<double, 3, 1> ZHAT;
-    Matrix<double, 3, 1> Z;
-    Matrix<double, 3, 3> H;
-    Matrix<double, 3, 3> S;
-    Matrix<double, 3, 3> Q;
-    Matrix<double, 3, 3> K;
-    Matrix<double, 3, 3> I;
+    Matrix<double, 2, 1> ZHAT; // expected sensor measurement
+    Matrix<double, 2, 1> Z; // sensor measurement
+    Matrix<double, 2, 3> H; // Jacobian
+    Matrix<double, 2, 2> S;
+    Matrix<double, 2, 2> Q; // measurement noise
+    Matrix<double, 3, 2> K; // Kalman gain
+    Matrix<double, 3, 3> I; // Identity
 
     G.setIdentity();
     V.setZero();
@@ -65,11 +61,8 @@ void EKF_localization::update(double v, double w, const std::vector<Landmark> &l
     double theta = yaw(); // previous yaw
 
     // noise
-    M(0, 0) = ALPHA1*v*v + ALPHA2*w*w;
-    M(1, 1) = ALPHA3*v*v + ALPHA4*w*w;
-
-    V(2, 0) = 0;
-    V(2, 1) = dt;
+    M(0, 0) = pow(ALPHA1*fabs(v) + ALPHA2*fabs(w), 2);
+    M(1, 1) = pow(ALPHA3*fabs(v) + ALPHA4*fabs(w), 2);
 
     // check if angular velocity is close to zero
     if (fabs(w) > EPS) {
@@ -81,6 +74,8 @@ void EKF_localization::update(double v, double w, const std::vector<Landmark> &l
         V(1, 0) = ( cos(theta) - cos(theta + w*dt))/w;
         V(0, 1) =  v*(sin(theta) - sin(theta + w*dt))/(w*w) + v*cos(theta + w*dt)*dt/w;
         V(1, 1) = -v*(cos(theta) - cos(theta + w*dt))/(w*w) + v*sin(theta + w*dt)*dt/w;
+        V(2, 0) = 0;
+        V(2, 1) = dt;
 
         // Prediction
         MU(0) = m_mu(0) - (v/w)*sin(theta) + (v/w)*sin(theta + w*dt);
@@ -98,6 +93,8 @@ void EKF_localization::update(double v, double w, const std::vector<Landmark> &l
         V(1, 0) = sin(theta)*dt;
         V(0, 1) = -v*sin(theta)*dt*dt*0.5;
         V(1, 1) =  v*cos(theta)*dt*dt*0.5;
+        V(2, 0) = 0;
+        V(2, 1) = dt;
 
         MU(0) = m_mu(0) + v*cos(theta)*dt;
         MU(1) = m_mu(1) + v*sin(theta)*dt;
@@ -109,7 +106,6 @@ void EKF_localization::update(double v, double w, const std::vector<Landmark> &l
     for (const auto &l : landmarks) {
         Z(0) = l.range;
         Z(1) = l.bearing;
-        Z(2) = 0; // landmark signature, not used
 
         if (fabs(l.range) > EPS) {
             double range, bearing;
@@ -117,7 +113,6 @@ void EKF_localization::update(double v, double w, const std::vector<Landmark> &l
 
             ZHAT(0) = range;
             ZHAT(1) = bearing;
-            ZHAT(2) = 0; // landmark signature, not used
 
             H(0, 0) = -(l.x - MU(0))/range;
             H(0, 1) = -(l.y - MU(1))/range;
@@ -128,43 +123,51 @@ void EKF_localization::update(double v, double w, const std::vector<Landmark> &l
 
             Q(0, 0) = pow(l.range*DETECTION_RANGE_ALPHA, 2);
             Q(1, 1) = pow(DETECTION_ANGLE_SIGMA, 2);
-            Q(2, 2) = 1; // arbitrary noise for signature
 
             S = H*COV*H.transpose() + Q;
 
             K = COV*H.transpose()*S.inverse();
             MU = MU + K*(Z - ZHAT);
             COV = (I - K*H)*COV;
+
+            MU(2) = constrain_angle(MU(2));
         }
     }
 
     m_mu = MU;
     m_cov = COV;
-
-    // cap yaw to [-pi, pi]
-    if (m_mu(2) > M_PI) {
-        m_mu(2) -= 2*M_PI;
-    } else if (m_mu(2) < -M_PI) {
-        m_mu(2) += 2*M_PI;
-    }
-
-    calc_error_ellipse();
 }
 
-void EKF_localization::calc_error_ellipse()
+double EKF_localization::constrain_angle(double radian)
 {
-    SelfAdjointEigenSolver<Matrix2d> a(m_cov.block<2, 2>(0, 0));
+    if (radian < -M_PI) {
+        radian += 2*M_PI;
+    } else if (radian > M_PI) {
+        radian -= 2*M_PI;
+    }
+
+    return radian;
+}
+
+void EKF_localization::ellipse(Eigen::MatrixXd X, double &major, double &minor, double &theta)
+{
+    SelfAdjointEigenSolver<Matrix2d> a(X);
 
     double e0 = sqrt(a.eigenvalues()(0));
     double e1 = sqrt(a.eigenvalues()(1));
 
     if (e0 > e1) {
-        m_ellipse_angle = atan2(a.eigenvectors()(1,0), a.eigenvectors()(0,0));
-        m_ellipse_major = e0;
-        m_ellipse_minor = e1;
+        theta = atan2(a.eigenvectors()(1, 0), a.eigenvectors()(0, 0));
+        major = e0;
+        minor = e1;
     } else {
-        m_ellipse_angle = atan2(a.eigenvectors()(1,1), a.eigenvectors()(0,1));
-        m_ellipse_major = e1;
-        m_ellipse_minor = e0;
+        theta = atan2(a.eigenvectors()(1, 1), a.eigenvectors()(0, 1));
+        major = e1;
+        minor = e0;
     }
+}
+
+void EKF_localization::pose_ellipse(double &major, double &minor, double &theta)
+{
+    ellipse(m_cov.block(0, 0, 2, 2), major, minor, theta);
 }

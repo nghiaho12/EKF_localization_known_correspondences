@@ -22,14 +22,12 @@ static const Landmark LANDMARKS[] = {
     {WORLD_WIDTH/2, WORLD_HEIGHT/2, 1, 0,  0},
 };
 
-// landmark detection noise parameters
-static const double LANDMARK_RANGE_SIGMA = 20.0;
-static const double LANDMARK_ANGLE_SIGMA = 2*M_PI/180;
-
 // motion noise parameters
+// velocity_noise          = alpha1*|velocity| + alpha2*|angular_velocity|
+// angular_velocity_noise  = alpha3*|velocity| + alpha4*|angular_velocity|
 static const double ALPHA1 = 0.1;
 static const double ALPHA2 = 0;
-static const double ALPHA3 = 0.0001;
+static const double ALPHA3 = 0.01;
 static const double ALPHA4 = 0.1;
 
 // robot motion properties
@@ -42,5 +40,5 @@ static const double DETECTION_RANGE = 200;
 static const double DETECTION_RANGE_ALPHA = 0.1;
 static const double DETECTION_ANGLE_SIGMA = 2*M_PI/180;
 
-// draw 95% confidence ellipse
-static const double ELLIPSE_CHI = 2.4477;
+// 99% confidence ellipse for 2 dimensions
+static const double ELLIPSE_SCALE = 3.0348;

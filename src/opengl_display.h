@@ -24,6 +24,7 @@ private:
     void render_robot();
     void render_robot(float x, float y, float yaw, float r, float g, float b);
     void render_boundary();
+    void render_ellipse(float x, float y, float major, float minor, float angle, float r, float g, float b);
 
     void init_robot();
     void update_robot();

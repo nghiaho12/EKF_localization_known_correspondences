@@ -10,7 +10,7 @@ using namespace std;
 Robot::Robot()
 {
     m_random_engine.seed(m_random_device());
-    m_dice = normal_distribution<double>(0.0 ,1.0);
+    m_dice = normal_distribution<double>(0.0, 1.0);
 }
 
 void Robot::update(double dt)
@@ -66,14 +66,14 @@ void Robot::landmark_range_bearing(const Landmark &l, double x, double y, double
 
 double Robot::vel_noisy()
 {
-    double sigma = sqrt((m_vel*m_vel*ALPHA1 + m_yaw_vel*m_yaw_vel*ALPHA2));
+    double sigma = ALPHA1*fabs(m_vel) + ALPHA2*fabs(m_yaw_vel);
 
     return m_vel + sigma*m_dice(m_random_engine);
 }
 
 double Robot::yaw_vel_noisy()
 {
-    double sigma = sqrt(m_vel*m_vel*ALPHA3 + m_yaw_vel*m_yaw_vel*ALPHA4);
+    double sigma = ALPHA3*fabs(m_vel) + ALPHA4*fabs(m_yaw_vel);
 
     return m_yaw_vel + sigma*m_dice(m_random_engine);
 }
